@@ -7,7 +7,7 @@ if sys.version_info < (3, 8):
 else:
     from typing import get_args, get_origin
 
-from typing import Type, Tuple, Union, Any, List, Dict, Set
+from typing import Type, Tuple, Union, Any, List, Dict, Set, Literal
 
 
 def is_optional(clazz: Type) -> bool:
@@ -216,3 +216,33 @@ def get_union_types(clazz: Type) -> Tuple[Type, ...]:
         raise TypeError("Type is not Union")
 
     return get_args(clazz) or (Any,)
+
+def is_literal(clazz: Type) -> bool:
+    """
+    Checks if the given type is a Literal.
+
+    Args:
+        clazz (Type): The type to check.
+
+    Returns:
+        bool: True if the type is a Literal, False otherwise.
+    """
+    return get_origin(clazz) is Literal
+
+
+def get_literal_values(clazz: Type) -> Tuple[Any, ...]:
+    """
+    Retrieves the possible values from a Literal type.
+
+    Args:
+        clazz (Type): The Literal type to extract values from.
+
+    Returns:
+        Tuple[Any, ...]: A tuple of all acceptable literal values.
+
+    Raises:
+        TypeError: If the given type is not a Literal.
+    """
+    if not is_literal(clazz):
+        raise TypeError("Type is not a Literal")
+    return get_args(clazz)

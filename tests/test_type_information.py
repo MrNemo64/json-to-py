@@ -45,5 +45,13 @@ class TestTypeHelpers(unittest.TestCase):
         with self.assertRaises(TypeError):
             get_union_types(int)
 
+    def test_literal(self):
+        self.assertTrue(is_literal(Literal[1, 2, 3]))
+        self.assertEqual(get_literal_values(Literal[1, 2, 3]), (1, 2, 3))
+        self.assertFalse(is_literal(int))
+        
+        with self.assertRaises(TypeError):
+            get_literal_values(int)
+
 if __name__ == "__main__":
     unittest.main()
