@@ -1,8 +1,14 @@
 import types
-from typing import (
-    Type, Tuple, Union, Any, List, Dict, Set, get_args, get_origin
-)
 import sys
+
+# Conditional import based on Python version
+if sys.version_info < (3, 8):
+    from typing_extensions import get_args, get_origin
+else:
+    from typing import get_args, get_origin
+
+from typing import Type, Tuple, Union, Any, List, Dict, Set
+
 
 def is_optional(clazz: Type) -> bool:
     origin = get_origin(clazz)
