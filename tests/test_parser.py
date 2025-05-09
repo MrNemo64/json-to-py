@@ -19,7 +19,7 @@ class TestTypeHelpers(unittest.TestCase):
                 with open(os.path.join(jsons_dir, filename), 'r') as f:
                     self.json_data[filename.replace('.json', '')] = json.load(f)
 
-    def test_named_tuple(self):
+    def test_named_tuple_all_ok(self):
         """Tests that the JSON files under /jsons are correctly parsed into NamedTuples."""
         for json_name, data in self.json_data.items():
             with self.subTest(json=json_name):
@@ -30,7 +30,7 @@ class TestTypeHelpers(unittest.TestCase):
                     parsed_value = parse_json(data, type(expected_value))
                 self.assertEqual(parsed_value, expected_value)
 
-    def test_data_class(self):
+    def test_data_class_all_ok(self):
         """Tests that the JSON files under /jsons are correctly parsed into DataClasses."""
         for json_name, data in self.json_data.items():
             with self.subTest(json=json_name):

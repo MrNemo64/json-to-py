@@ -81,7 +81,7 @@ class TestTypeHelpers(unittest.TestCase):
         self.assertEqual(field_info['altitude'].name_in_class, 'z')
 
     def test_extract_field_info_invalid(self):
-        self.assertRaises(TypeError, extract_field_info, int)  # Non-dataclass/non-namedtuple
+        self.assertRaises(TypeError, extract_field_info, int)
 
 if __name__ == "__main__":
     unittest.main()
