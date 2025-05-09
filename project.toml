@@ -1,0 +1,21 @@
+[project]
+authors = [{name = "Nemo_64"}]
+description = "Convert JSON to Python dataclasses or namedtuples"
+license = {text = "MIT"}
+name = "json-to-py"
+readme = "README.md"
+requires-python = ">=3.7"
+version = "0.1.0"
+
+[project.urls]
+Homepage = "https://github.com/yourname/json-to-py"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[build-system]
+build-backend = "setuptools.build_meta"
+requires = ["setuptools>=61.0"]
