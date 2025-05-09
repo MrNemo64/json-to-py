@@ -1,4 +1,10 @@
-from typing import Literal, NamedTuple, Optional, List, Union
+import sys
+from typing import NamedTuple, Optional, List, Union
+
+if sys.version_info < (3, 8):
+    from typing_extensions import Literal
+else:
+    from typing import Literal
 
 class PrimitiveTypes(NamedTuple):
     integer: int

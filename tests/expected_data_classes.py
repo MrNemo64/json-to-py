@@ -1,5 +1,11 @@
-from typing import Literal, Optional, List, Union
+import sys
+from typing import Optional, List, Union
 from dataclasses import dataclass
+
+if sys.version_info < (3, 8):
+    from typing_extensions import Literal
+else:
+    from typing import Literal
 
 @dataclass
 class PrimitiveTypes():
