@@ -1,0 +1,9 @@
+{
+  "name": "Alice",
+  "age": 30,
+  "address": {
+    "street": "123 Main St",
+    "city": "Wonderland",
+    "postal_code": "12345"
+  }
+}
