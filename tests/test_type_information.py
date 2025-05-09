@@ -1,3 +1,4 @@
+from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Set, Tuple
 from json_to_py.type_information import *
 import unittest
@@ -52,6 +53,35 @@ class TestTypeHelpers(unittest.TestCase):
         
         with self.assertRaises(TypeError):
             get_literal_values(int)
+
+    def test_namedtuple(self):
+        class Point(NamedTuple):
+            x: int
+            y: int
+        field_info = extract_field_info(Point)
+        self.assertIn('x', field_info)
+        self.assertIn('y', field_info)
+        self.assertEqual(field_info['x'].clazz, int)
+        self.assertEqual(field_info['y'].clazz, int)
+
+    def test_dataclass(self):
+        @dataclass
+        class Point:
+            x: int
+            y: int
+            z: Optional[int] = field(default=None, metadata={"json_name": "altitude"})
+
+        field_info = extract_field_info(Point)
+        self.assertIn('x', field_info)
+        self.assertIn('y', field_info)
+        self.assertIn('altitude', field_info)
+        self.assertEqual(field_info['x'].clazz, int)
+        self.assertEqual(field_info['y'].clazz, int)
+        self.assertEqual(field_info['altitude'].clazz, Optional[int])
+        self.assertEqual(field_info['altitude'].name_in_class, 'z')
+
+    def test_extract_field_info_invalid(self):
+        self.assertRaises(TypeError, extract_field_info, int)  # Non-dataclass/non-namedtuple
 
 if __name__ == "__main__":
     unittest.main()

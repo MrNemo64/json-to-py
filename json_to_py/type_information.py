@@ -3,11 +3,12 @@ import sys
 
 # Conditional import based on Python version
 if sys.version_info < (3, 8):
-    from typing_extensions import get_args, get_origin, Literal
+    from typing_extensions import get_args, get_origin, get_type_hints, Literal
 else:
-    from typing import get_args, get_origin, Literal
+    from typing import get_args, get_origin, get_type_hints, Literal
 
-from typing import Type, Tuple, Union, Any, List, Dict, Set
+from typing import Type, Tuple, Union, Any, List, Dict, Set, NamedTuple
+from dataclasses import is_dataclass, fields
 
 
 def is_optional(clazz: Type) -> bool:
@@ -246,3 +247,68 @@ def get_literal_values(clazz: Type) -> Tuple[Any, ...]:
     if not is_literal(clazz):
         raise TypeError("Type is not a Literal")
     return get_args(clazz)
+
+class FieldInformation(NamedTuple):
+    clazz: Type
+    name_in_class: str
+
+
+def is_namedtuple(clazz: Type) -> bool:
+    """
+    Checks if a class is a NamedTuple.
+
+    Args:
+        clazz (Type): The class to check.
+
+    Returns:
+        bool: True if it is a NamedTuple, False otherwise.
+    """
+    return isinstance(clazz, type) and issubclass(clazz, tuple) and hasattr(clazz, "_fields")
+
+
+def is_supported_class(clazz: Type) -> bool:
+    """
+    Checks if a class is either a dataclass or a NamedTuple.
+
+    Args:
+        clazz (Type): The class to check.
+
+    Returns:
+        bool: True if the class is supported (dataclass or NamedTuple), False otherwise.
+    """
+    return is_namedtuple(clazz) or is_dataclass(clazz)
+
+
+def extract_field_info(clazz: Type) -> Dict[str, FieldInformation]:
+    """
+    Extracts field information from a dataclass or NamedTuple.
+
+    Args:
+        clazz (Type): The class to extract field info from.
+
+    Returns:
+        Dict[str, FieldInformation]: Mapping from JSON key name to field info.
+
+    Raises:
+        TypeError: If the class is not supported.
+    """
+    result = {}
+
+    try:
+        type_hints = get_type_hints(clazz, globalns=vars(__import__(clazz.__module__)))
+    except Exception as e:
+        raise TypeError(f"Failed to resolve type hints for {clazz}: {e}")
+
+    if is_namedtuple(clazz):
+        for name, typ in type_hints.items():
+            result[name] = FieldInformation(clazz=typ, name_in_class=name)
+
+    elif is_dataclass(clazz):
+        for f in fields(clazz):
+            json_name = f.metadata.get("json_name", f.name)
+            result[json_name] = FieldInformation(clazz=f.type, name_in_class=f.name)
+
+    else:
+        raise TypeError(f"Unsupported class type: {clazz}")
+
+    return result
