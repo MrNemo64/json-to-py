@@ -1,6 +1,7 @@
 
 from typing import Dict, Type, Union, List, Any, NamedTuple, get_type_hints, Tuple
 from dataclasses import is_dataclass, fields
+from . import type_information
 
 class _FieldInformation(NamedTuple):
     clazz: Type
@@ -28,11 +29,38 @@ def _extract_field_info(clazz: Type) -> Dict[str, _FieldInformation]:
 
     return result
 
+def _parse_value(value: Any, clazz: Type, field_json_name: str):
+    ex = Exception(f"Key {field_json_name} is a {type(value)} but expected a {clazz}")
+
+    if type_information.is_optional(clazz):
+        if value is not None:
+            value = _parse_value(value, type_information.get_optional_type(clazz), field_json_name)
+    elif clazz is str:
+        if not isinstance(value, str):
+            raise ex
+    elif clazz is int:
+        if not isinstance(value, int):
+            raise ex
+    elif clazz is float:
+        if not isinstance(value, float):
+            raise ex
+    elif clazz is bool:
+        if not isinstance(value, bool):
+            raise ex
+    elif type_information.is_list(clazz):
+        if not isinstance(value, list):
+            raise ex
+        clazz = type_information.get_list_type(clazz)
+        value = [_parse_value(v, clazz, field_json_name) for v in value]
+    return value
+
 def _parse_object(data: Dict, clazz: Type):
     fields = _extract_field_info(clazz)
-
-    for field_json_name, field in fields:
+    values = {}
+    for field_json_name, field in fields.items():
         field_value = data.get(field_json_name, None)
+        values[field.name_in_class] = _parse_value(field_value, field.clazz, field_json_name)
+    return clazz(**values)
 
 
 def parse_json(data: Union[Dict[str, Any], List[Dict[str, Any]]], clazz: Union[Type, List[Type]]):
