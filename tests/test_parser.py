@@ -2,6 +2,7 @@ import unittest
 import os
 import json
 from json_to_py.parser import parse_json
+from json_to_py import type_information
 
 from tests.expected_named_tuples import EXPECTED as EXPECTED_NAMED_TUPLES
 from tests.expected_data_classes import EXPECTED as EXPECTED_DATA_CLASSES
@@ -21,19 +22,23 @@ class TestTypeHelpers(unittest.TestCase):
     def test_named_tuple(self):
         """Tests that the JSON files under /jsons are correctly parsed into NamedTuples."""
         for json_name, data in self.json_data.items():
-            expected_value = EXPECTED_NAMED_TUPLES.get(json_name)
-            print(f"Testing named tuple {json_name}")
-            if expected_value:
-                parsed_value = parse_json(data, type(expected_value))
+            with self.subTest(json=json_name):
+                expected_value = EXPECTED_NAMED_TUPLES.get(json_name)
+                if isinstance(expected_value, list):
+                    parsed_value = parse_json(data, [type(expected_value[0])])
+                else:
+                    parsed_value = parse_json(data, type(expected_value))
                 self.assertEqual(parsed_value, expected_value)
 
     def test_data_class(self):
         """Tests that the JSON files under /jsons are correctly parsed into DataClasses."""
         for json_name, data in self.json_data.items():
-            expected_value = EXPECTED_DATA_CLASSES.get(json_name)
-            print(f"Testing data class {json_name}")
-            if expected_value:
-                parsed_value = parse_json(data, type(expected_value))  # Assuming 'PrimitiveTypes' is your dataclass
+            with self.subTest(json=json_name):
+                expected_value = EXPECTED_DATA_CLASSES.get(json_name)
+                if isinstance(expected_value, list):
+                    parsed_value = parse_json(data, [type(expected_value[0])])
+                else:
+                    parsed_value = parse_json(data, type(expected_value))
                 self.assertEqual(parsed_value, expected_value)
 
 if __name__ == "__main__":
