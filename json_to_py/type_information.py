@@ -179,3 +179,40 @@ def get_tuple_types(clazz: Type) -> Tuple[Type, ...]:
         raise TypeError("Type is not Tuple")
 
     return get_args(clazz) or (Any,)
+
+
+def is_union(clazz: Type) -> bool:
+    """
+    Checks if the given type is a Union.
+
+    Args:
+        clazz (Type): The type to check.
+
+    Returns:
+        bool: True if the type is a Union, False otherwise.
+    """
+    origin = get_origin(clazz)
+    if origin is Union:
+        return True
+    if sys.version_info >= (3, 10):
+        return clazz.__class__ is types.UnionType
+    return False
+
+
+def get_union_types(clazz: Type) -> Tuple[Type, ...]:
+    """
+    Retrieves the individual types inside a Union.
+
+    Args:
+        clazz (Type): The Union type.
+
+    Returns:
+        Tuple[Type, ...]: A tuple of types in the Union.
+
+    Raises:
+        TypeError: If the given type is not a Union.
+    """
+    if not is_union(clazz):
+        raise TypeError("Type is not Union")
+
+    return get_args(clazz) or (Any,)
