@@ -1,0 +1,8 @@
+{
+  "integer": 123,
+  "string": "str",
+  "boolean": true,
+  "optional_null": null,
+  "optional_int": 456,
+  "float": 1.2
+}

@@ -11,10 +11,10 @@ version = "0.1.0"
 Homepage = "https://github.com/yourname/json-to-py"
 
 [tool.setuptools]
-package-dir = {"" = "src"}
+package-dir = {"" = "."}
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 
 [build-system]
 build-backend = "setuptools.build_meta"
