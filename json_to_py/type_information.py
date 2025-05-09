@@ -3,11 +3,11 @@ import sys
 
 # Conditional import based on Python version
 if sys.version_info < (3, 8):
-    from typing_extensions import get_args, get_origin
+    from typing_extensions import get_args, get_origin, Literal
 else:
-    from typing import get_args, get_origin
+    from typing import get_args, get_origin, Literal
 
-from typing import Type, Tuple, Union, Any, List, Dict, Set, Literal
+from typing import Type, Tuple, Union, Any, List, Dict, Set
 
 
 def is_optional(clazz: Type) -> bool:
