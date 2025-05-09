@@ -46,7 +46,7 @@ def _parse_value(value: Any, clazz: Type, field_json_name: str):
         key_clazz, value_clazz = type_information.get_dict_types(clazz)
         if not key_clazz is str:
             raise Exception(f"Dict keys must be strings not {key_clazz}")
-        return {k: _parse_value(v, value_clazz) for k, v in value}
+        return {k: _parse_value(v, value_clazz, k) for k, v in value.items()}
 
     elif type_information.is_set(clazz):
         if not isinstance(value, list):
@@ -94,7 +94,6 @@ def _parse_object(data: Dict, clazz: Type):
         field_value = data.get(field_json_name, None)
         values[field.name_in_class] = _parse_value(field_value, field.clazz, field_json_name)
     return clazz(**values)
-
 
 def parse_json(data: Union[Dict[str, Any], List[Dict[str, Any]]], clazz: Union[Type, List[Type]]):
     if isinstance(clazz, list):

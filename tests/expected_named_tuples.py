@@ -21,7 +21,6 @@ class Person(NamedTuple):
     age: int
     address: Address
 
-
 class Item(NamedTuple):
     id: int
     value: Union[str, float]
@@ -37,6 +36,10 @@ class OrderList(NamedTuple):
 class OrderSet(NamedTuple):
     id: int
     products: set[Product]
+
+class OrderDict(NamedTuple):
+    id: int
+    products: dict[str, Product]
 
 class Status(NamedTuple):
     status: Literal["active", "inactive"]

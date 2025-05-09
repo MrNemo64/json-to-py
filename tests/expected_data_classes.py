@@ -31,7 +31,7 @@ class Item:
     id: int
     value: Union[str, float]
 
-@dataclass
+@dataclass(frozen=True)
 class Product:
     name: str
     price: float
@@ -45,6 +45,11 @@ class OrderList:
 class OrderSet:
     id: int
     products: set[Product]
+
+@dataclass
+class OrderDict:
+    id: int
+    products: dict[str, Product]
 
 @dataclass
 class Status:

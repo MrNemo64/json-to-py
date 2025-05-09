@@ -15,6 +15,7 @@ def generate_expected(module):
     Product = module.Product
     OrderList = module.OrderList
     OrderSet = module.OrderSet
+    OrderDict = module.OrderDict
     Status = module.Status
 
     return {
@@ -43,16 +44,19 @@ def generate_expected(module):
             ]
         ),
         "set_of_complex_type": OrderSet(
-            id=1,
-            products={
+            id = 1,
+            products = {
                 Product(name="Laptop", price=999.99),
                 Product(name="Mouse", price=49.99)
             }
         ),
-        "dict_of_complex_type": {
-            "product1": Product(name="Laptop", price=999.99),
-            "product2": Product(name="Mouse", price=49.99)
-        },
+        "dict_of_complex_type": OrderDict(
+            id = 1,
+            products = {
+                "product1": Product(name="Laptop", price=999.99),
+                "product2": Product(name="Mouse", price=49.99)
+            }
+        ),
         "literal_active": Status(status="active"),
         "literal_inactive": Status(status="inactive")
     }
