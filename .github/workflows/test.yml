@@ -3,17 +3,39 @@ name: Python Test
 on: [pull_request]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
+  test-ubuntu-22:
+    runs-on: ubuntu-22.04 # Use Ubuntu 22.04 for Python 3.7
 
     strategy:
       matrix:
-        python-version: ["3.7", "3.8", "3.9", "3.10", "3.11"]
+        python-version: ["3.7"]
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2
       - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+        uses: actions/setup-python@v3
+        with:
+          python-version: ${{ matrix.python-version }}
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest
+          pip install -r requirements.txt
+      - name: Run tests
+        run: |
+          PYTHONPATH=src pytest
+
+  test-ubuntu-latest:
+    runs-on: ubuntu-latest # Use Ubuntu latest for Python 3.8 and above
+
+    strategy:
+      matrix:
+        python-version: ["3.8", "3.9", "3.10", "3.11"]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
