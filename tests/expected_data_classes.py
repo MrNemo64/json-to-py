@@ -1,5 +1,5 @@
 import sys
-from typing import Optional, List, Union
+from typing import Dict, Optional, List, Set, Union
 from dataclasses import dataclass
 
 if sys.version_info < (3, 8):
@@ -45,17 +45,17 @@ class Product:
 @dataclass
 class OrderList:
     id: int
-    products: list[Product]
+    products: List[Product]
 
 @dataclass
 class OrderSet:
     id: int
-    products: set[Product]
+    products: Set[Product]
 
 @dataclass
 class OrderDict:
     id: int
-    products: dict[str, Product]
+    products: Dict[str, Product]
 
 @dataclass
 class Status:

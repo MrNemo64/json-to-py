@@ -1,5 +1,5 @@
 import sys
-from typing import NamedTuple, Optional, List, Union
+from typing import Dict, NamedTuple, Optional, List, Set, Union
 
 if sys.version_info < (3, 8):
     from typing_extensions import Literal
@@ -37,15 +37,15 @@ class Product(NamedTuple):
 
 class OrderList(NamedTuple):
     id: int
-    products: list[Product]
+    products: List[Product]
 
 class OrderSet(NamedTuple):
     id: int
-    products: set[Product]
+    products: Set[Product]
 
 class OrderDict(NamedTuple):
     id: int
-    products: dict[str, Product]
+    products: Dict[str, Product]
 
 class Status(NamedTuple):
     status: Literal["active", "inactive"]
