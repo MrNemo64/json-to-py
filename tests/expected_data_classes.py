@@ -1,4 +1,4 @@
-from typing import Optional, List
+from typing import Literal, Optional, List, Union
 from dataclasses import dataclass
 
 @dataclass
@@ -25,3 +25,27 @@ class Person:
     name: str
     age: int
     address: Address
+
+@dataclass
+class Item:
+    id: int
+    value: Union[str, float]
+
+@dataclass
+class Product:
+    name: str
+    price: float
+
+@dataclass
+class OrderList:
+    id: int
+    products: list[Product]
+
+@dataclass
+class OrderSet:
+    id: int
+    products: set[Product]
+
+@dataclass
+class Status:
+    status: Literal["active", "inactive"]

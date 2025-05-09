@@ -86,6 +86,8 @@ def _parse_value(value: Any, clazz: Type, field_json_name: str):
     raise Exception(f"Cannot parse {clazz}")
 
 def _parse_object(data: Dict, clazz: Type):
+    if type_information.is_dict(clazz):
+        return _parse_value(data, clazz)
     fields = type_information.extract_field_info(clazz)
     values = {}
     for field_json_name, field in fields.items():

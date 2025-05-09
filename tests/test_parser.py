@@ -11,6 +11,11 @@ def generate_expected(module):
     Matrix = module.Matrix
     Address = module.Address
     Person = module.Person
+    Item = module.Item
+    Product = module.Product
+    OrderList = module.OrderList
+    OrderSet = module.OrderSet
+    Status = module.Status
 
     return {
         "primitive_types": PrimitiveTypes(123, "str", True, None, 456, 1.2),
@@ -28,6 +33,28 @@ def generate_expected(module):
                 postal_code="12345"
             )
         ),
+        "union_type_str": Item(id=1, value="apple"),
+        "union_type_float": Item(id=1, value=10.5),
+        "list_of_complex_type": OrderList(
+            id=1,
+            products=[
+                Product(name="Laptop", price=999.99),
+                Product(name="Mouse", price=49.99)
+            ]
+        ),
+        "set_of_complex_type": OrderSet(
+            id=1,
+            products={
+                Product(name="Laptop", price=999.99),
+                Product(name="Mouse", price=49.99)
+            }
+        ),
+        "dict_of_complex_type": {
+            "product1": Product(name="Laptop", price=999.99),
+            "product2": Product(name="Mouse", price=49.99)
+        },
+        "literal_active": Status(status="active"),
+        "literal_inactive": Status(status="inactive")
     }
 
 
