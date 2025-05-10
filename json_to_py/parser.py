@@ -3,9 +3,14 @@ from typing import Dict, Type, Union, List, Any, NamedTuple, get_type_hints, Tup
 from dataclasses import is_dataclass, fields
 from . import type_information
 
-def _parse_value(value: Any, clazz: Type, field_json_name: str):
-    ex = Exception(f"Key {field_json_name} is a {type(value)} but expected a {clazz}")
+class UnexpectedTypeException(Exception):
+    def __init__(self, actual_value: Any, expected_type: Type, json_path: str):
+        super().__init__(f"Key {json_path} is a {type(actual_value)} but expected a {expected_type}")
+        self.actual_value = actual_value
+        self.expected_type = expected_type
+        self.json_path = json_path
 
+def _parse_value(value: Any, clazz: Type, field_json_name: str):
     if clazz is Any:
         return value
     
@@ -16,33 +21,33 @@ def _parse_value(value: Any, clazz: Type, field_json_name: str):
 
     elif clazz is str:
         if not isinstance(value, str):
-            raise ex
+            raise UnexpectedTypeException(value, str, field_json_name)
         return value
 
     elif clazz is int:
         if not isinstance(value, int):
-            raise ex
+            raise UnexpectedTypeException(value, int, field_json_name)
         return value
 
     elif clazz is float:
         if not isinstance(value, float):
-            raise ex
+            raise UnexpectedTypeException(value, float, field_json_name)
         return value
 
     elif clazz is bool:
         if not isinstance(value, bool):
-            raise ex
+            raise UnexpectedTypeException(value, bool, field_json_name)
         return value
 
     elif type_information.is_list(clazz):
         if not isinstance(value, list):
-            raise ex
+            raise UnexpectedTypeException(value, list, field_json_name)
         clazz = type_information.get_list_type(clazz)
         return [_parse_value(v, clazz, field_json_name) for v in value]
 
     elif type_information.is_dict(clazz):
         if not isinstance(value, dict):
-            raise ex
+            raise UnexpectedTypeException(value, dict, field_json_name)
         key_clazz, value_clazz = type_information.get_dict_types(clazz)
         if not key_clazz is str:
             raise Exception(f"Dict keys must be strings not {key_clazz}")
@@ -50,13 +55,13 @@ def _parse_value(value: Any, clazz: Type, field_json_name: str):
 
     elif type_information.is_set(clazz):
         if not isinstance(value, list):
-            raise ex
+            raise UnexpectedTypeException(value, list, field_json_name)
         clazz = type_information.get_set_type(clazz)
         return {_parse_value(v, clazz, field_json_name) for v in value}
 
     elif type_information.is_tuple(clazz):
         if not isinstance(value, list):
-            raise ex
+            raise UnexpectedTypeException(value, list, field_json_name)
         classes = type_information.get_tuple_types(clazz)
         if len(classes) != len(value):
             raise Exception(f"Expected tuple to have {len(classes)} but has {len(value)}")
@@ -86,8 +91,6 @@ def _parse_value(value: Any, clazz: Type, field_json_name: str):
     raise Exception(f"Cannot parse {clazz}")
 
 def _parse_object(data: Dict, clazz: Type):
-    if type_information.is_dict(clazz):
-        return _parse_value(data, clazz)
     fields = type_information.extract_field_info(clazz)
     values = {}
     for field_json_name, field in fields.items():
@@ -101,10 +104,10 @@ def parse_json(data: Union[Dict[str, Any], List[Dict[str, Any]]], clazz: Union[T
             raise Exception()
         if not isinstance(data, list):
             raise Exception()
-        return [_parse_object(value, clazz[0]) for value in data]
+        return [_parse_value(value, clazz[0], "") for value in data]
     
     if not isinstance(clazz, type):
         raise Exception()
     if not isinstance(data, dict):
         raise Exception()
-    return _parse_object(data, clazz)
+    return _parse_value(data, clazz, "")
