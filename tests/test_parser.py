@@ -1,7 +1,9 @@
+from typing import Dict, List
 import unittest
 import os
 import json
-from json_to_py.parser import parse_json
+from json_to_py.parser import parse_json, UnexpectedTypeException
+from dataclasses import dataclass
 
 import tests.expected_named_tuples as expected_named_tuples
 import tests.expected_data_classes as expected_data_classes
@@ -97,6 +99,38 @@ class TestTypeHelpers(unittest.TestCase):
                 else:
                     parsed_value = parse_json(data, type(expected_value))
                 self.assertEqual(parsed_value, expected_value)
+
+    def test_invalid_json(self):
+        """Test for an invalid json"""
+        @dataclass
+        class MyDeeperClass():
+            a: int
+            b: int
+            d: Dict[str, List[int]]
+        @dataclass
+        class MyClass():
+            x: int
+            y: int
+            c: MyDeeperClass
+        
+        with self.assertRaises(UnexpectedTypeException) as cm:
+            parse_json({
+                "x": 123,
+                "y": 456,
+                "c": {
+                    "a": 789,
+                    "b": 101112,
+                    "d": {
+                        "i": [131415],
+                        "j": [161718],
+                        "k": [192021, "a string that should be an int"]
+                    }
+                }
+            }, MyClass)
+        ex = cm.exception
+        self.assertEqual("a string that should be an int", ex.actual_value)
+        self.assertIs(int, ex.expected_type)
+        self.assertEqual(["c", "d", "k", "1"], ex.json_path)
 
 if __name__ == "__main__":
     unittest.main()
