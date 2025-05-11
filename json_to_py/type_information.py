@@ -278,6 +278,9 @@ def is_supported_class(clazz: Type) -> bool:
     """
     return is_namedtuple(clazz) or is_dataclass(clazz)
 
+class InvalidJsonToPyMedatada(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)
 
 def extract_field_info(clazz: Type) -> Dict[str, FieldInformation]:
     """
@@ -305,8 +308,14 @@ def extract_field_info(clazz: Type) -> Dict[str, FieldInformation]:
 
     elif is_dataclass(clazz):
         for f in fields(clazz):
-            json_name = f.metadata.get("json_name", f.name)
-            result[json_name] = FieldInformation(clazz=f.type, name_in_class=f.name)
+            metadata = f.metadata.get("json-to-py", None)
+            if metadata is not None:
+                result[f.name] = FieldInformation(clazz=f.type, name_in_class=f.name)
+            if not isinstance(metadata, dict):
+                raise InvalidJsonToPyMedatada("The json-to-py field of the metadata must be a dict")
+            else:
+                json_name = metadata.get
+                result[json_name] = FieldInformation(clazz=f.type, name_in_class=f.name)
 
     else:
         raise TypeError(f"Unsupported class type: {clazz}")
