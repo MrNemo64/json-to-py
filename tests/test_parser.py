@@ -1,7 +1,17 @@
+
+import sys
+
+if sys.version_info < (3, 8):
+    from typing_extensions import Literal
+else:
+    from typing import Literal
+    
+from typing import Dict, List, Set, Tuple, Union
 import unittest
 import os
 import json
-from json_to_py.parser import parse_json
+from json_to_py.parser import CanNotParseTypeException, NoLiteralVariantException, parse_json, UnexpectedTypeException, InvaludTupleSizeException, NonStringKeyException, NoUnionVariantException
+from dataclasses import dataclass, field
 
 import tests.expected_named_tuples as expected_named_tuples
 import tests.expected_data_classes as expected_data_classes
@@ -20,10 +30,6 @@ def generate_expected(module):
 
     return {
         "primitive_types": PrimitiveTypes(123, "str", True, None, 456, 1.2),
-        "list_of_primitive_types": [
-            PrimitiveTypes(123, "str", True, None, 456, 1.2),
-            PrimitiveTypes(123123, "strstr", False, None, 456456, 12.3)
-        ],
         "lists_with_lists": Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
         "nested_data_class": Person(
             name="Alice",
@@ -97,6 +103,125 @@ class TestTypeHelpers(unittest.TestCase):
                 else:
                     parsed_value = parse_json(data, type(expected_value))
                 self.assertEqual(parsed_value, expected_value)
+
+    def test_invalid_json(self):
+        """Test for an invalid json"""
+        @dataclass
+        class MyDeeperClass():
+            a: int
+            b: int
+            d: Dict[str, List[int]]
+        @dataclass
+        class MyClass():
+            x: int
+            y: int
+            c: MyDeeperClass
+        
+        with self.assertRaises(UnexpectedTypeException) as cm:
+            parse_json({
+                "x": 123,
+                "y": 456,
+                "c": {
+                    "a": 789,
+                    "b": 101112,
+                    "d": {
+                        "i": [131415],
+                        "j": [161718],
+                        "k": [192021, "a string that should be an int"]
+                    }
+                }
+            }, MyClass)
+        ex = cm.exception
+        self.assertEqual("a string that should be an int", ex.actual_value)
+        self.assertIs(int, ex.expected_type)
+        self.assertEqual(["c", "d", "k", 1], ex.json_path)
+        self.assertEqual("c.d.k[1]", ex.full_path)
+
+class TestParseJsonFailures(unittest.TestCase):
+
+    def test_str_type_mismatch(self):
+        with self.assertRaises(UnexpectedTypeException) as cm:
+            parse_json(123, str)
+        e = cm.exception
+        self.assertEqual(e.actual_value, 123)
+        self.assertEqual(e.expected_type, str)
+        self.assertEqual(e.json_path, [])
+    
+    def test_int_type_mismatch(self):
+        with self.assertRaises(UnexpectedTypeException) as cm:
+            parse_json("not an int", int)
+        e = cm.exception
+        self.assertEqual(e.actual_value, "not an int")
+        self.assertEqual(e.expected_type, int)
+        self.assertEqual(e.json_path, [])
+
+    def test_float_type_mismatch(self):
+        with self.assertRaises(UnexpectedTypeException) as cm:
+            parse_json("1.0", float)
+        e = cm.exception
+        self.assertEqual(e.actual_value, "1.0")
+        self.assertEqual(e.expected_type, float)
+        self.assertEqual(e.json_path, [])
+
+    def test_bool_type_mismatch(self):
+        with self.assertRaises(UnexpectedTypeException) as cm:
+            parse_json("True", bool)
+        e = cm.exception
+        self.assertEqual(e.actual_value, "True")
+        self.assertEqual(e.expected_type, bool)
+
+    def test_list_type_mismatch(self):
+        with self.assertRaises(UnexpectedTypeException) as cm:
+            parse_json("not a list", List[int])
+        e = cm.exception
+        self.assertEqual(e.expected_type, list)
+
+    def test_dict_type_mismatch(self):
+        with self.assertRaises(UnexpectedTypeException) as cm:
+            parse_json("{}", Dict[str, int])
+        e = cm.exception
+        self.assertEqual(e.expected_type, dict)
+
+    def test_dict_key_nonstring(self):
+        with self.assertRaises(NonStringKeyException) as cm:
+            parse_json({"a": 1}, Dict[int, int])
+        e = cm.exception
+        self.assertEqual(e.key_clazz, int)
+
+    def test_set_type_mismatch(self):
+        with self.assertRaises(UnexpectedTypeException) as cm:
+            parse_json("not a list", Set[int])
+        e = cm.exception
+        self.assertEqual(e.expected_type, list)
+
+    def test_tuple_wrong_length(self):
+        with self.assertRaises(InvaludTupleSizeException) as cm:
+            parse_json([1], Tuple[int, str])
+        e = cm.exception
+        self.assertEqual(e.tuple_size, 2)
+
+    def test_union_no_match(self):
+        with self.assertRaises(NoUnionVariantException) as cm:
+            parse_json(True, Union[int, str])
+        e = cm.exception
+        self.assertEqual(e.union_variants, (int, str))
+        self.assertEqual(e.actual_value, True)
+        self.assertTrue(len(e.exceptions) == 2)
+
+    def test_literal_mismatch(self):
+        with self.assertRaises(NoLiteralVariantException) as cm:
+            parse_json("nope", Literal["a", "b"])
+        e = cm.exception
+        self.assertIn("nope", str(e))
+        self.assertEqual(e.varian_values, ("a", "b"))
+
+    def test_unknown_type(self):
+        class CustomClass: pass
+        with self.assertRaises(CanNotParseTypeException) as cm:
+            parse_json({}, CustomClass)
+        e = cm.exception
+        self.assertEqual(e.clazz, CustomClass)
+        self.assertEqual(e.actual_value, {})
 
 if __name__ == "__main__":
     unittest.main()

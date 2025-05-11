@@ -1,110 +1,159 @@
 
-from typing import Dict, Type, Union, List, Any, NamedTuple, get_type_hints, Tuple
-from dataclasses import is_dataclass, fields
+import sys
+from typing import Dict, Optional, Tuple, Type, TypeVar, Union, List, Any
 from . import type_information
 
-def _parse_value(value: Any, clazz: Type, field_json_name: str):
-    ex = Exception(f"Key {field_json_name} is a {type(value)} but expected a {clazz}")
+if sys.version_info < (3, 8):
+    from typing_extensions import Literal
+else:
+    from typing import Literal
 
+def _print_json_path(items: List[Union[str, int]]) -> str:
+    result = []
+    for item in items:
+        if isinstance(item, str):
+            if result:
+                result.append(".")
+            result.append(item)
+        else:
+            result.append("[" + str(item) + "]")
+    return ''.join(result)
+
+class JsonParsingException(Exception):
+    def __init__(self, msg: str, json_path: List[Union[str, int]], full_path: Optional[str] = None):
+        full_path = _print_json_path(json_path) if full_path is None else full_path
+        super().__init__(msg)
+        self.json_path = json_path
+        self.full_path = full_path
+
+class UnexpectedTypeException(JsonParsingException):
+    def __init__(self, actual_value: Any, expected_type: Type, json_path: List[Union[str, int]], full_path: Optional[str] = None, msg: Optional[str] = None):
+        full_path = _print_json_path(json_path) if full_path is None else full_path
+        msg = f"Key {full_path} is a {type(actual_value)} but expected a {expected_type}" if msg is None else msg
+        super().__init__(msg, json_path, full_path)
+        self.actual_value = actual_value
+        self.expected_type = expected_type
+
+class NoUnionVariantException(UnexpectedTypeException):
+    def __init__(self, actual_value: Any, variants: Tuple[Type], exceptions: List[JsonParsingException], json_path: List[Union[str, int]], full_path: Optional[str] = None):
+        full_path = _print_json_path(json_path) if full_path is None else full_path
+        super().__init__(actual_value, Union, json_path, full_path, f"None of the union variants at {full_path} matched the value {actual_value}: {', '.join(map(str, exceptions))}")
+        self.union_variants = variants
+        self.exceptions = exceptions
+
+class NonStringKeyException(UnexpectedTypeException):
+    def __init__(self, actual_value: Any, key_clazz: Type, json_path: List[Union[str, int]], full_path: Optional[str] = None):
+        full_path = _print_json_path(json_path) if full_path is None else full_path
+        super().__init__(actual_value, str, json_path, full_path, f"Dict keys must be strings but at {full_path} the keys are {key_clazz}")
+        self.key_clazz = key_clazz
+
+class NoLiteralVariantException(UnexpectedTypeException):
+    def __init__(self, actual_value: Any, expected_values: Tuple[Any], json_path: List[Union[str, int]], full_path: Optional[str] = None):
+        full_path = _print_json_path(json_path) if full_path is None else full_path
+        super().__init__(actual_value, Literal, json_path, full_path, f"No literal variant of the list [{', '.join(map(str, expected_values))}] matched the value {actual_value} at {full_path}")
+        self.varian_values = expected_values
+
+class InvaludTupleSizeException(UnexpectedTypeException):
+    def __init__(self, actual_value: Any, tuple_size: int, json_path: List[Union[str, int]], full_path: Optional[str] = None):
+        full_path = _print_json_path(json_path) if full_path is None else full_path
+        super().__init__(actual_value, Tuple, json_path, full_path, f"Expected json list {actual_value} at {full_path} to have {tuple_size} elements but has {len(actual_value)}")
+        self.tuple_size = tuple_size
+
+class CanNotParseTypeException(JsonParsingException):
+    def __init__(self, actual_value: Any, clazz: Type, json_path: List[Union[str, int]], full_path: Optional[str] = None):
+        full_path = _print_json_path(json_path) if full_path is None else full_path
+        super().__init__(f"Cannot parse {clazz} at {full_path}", json_path, full_path)
+        self.actual_value = actual_value
+        self.clazz = clazz
+
+def _parse_value(value: Any, clazz: Type, json_path: List[str]):
     if clazz is Any:
         return value
     
     elif type_information.is_optional(clazz):
         if value is not None:
-            value = _parse_value(value, type_information.get_optional_type(clazz), field_json_name)
+            value = _parse_value(value, type_information.get_optional_type(clazz), json_path)
         return value
 
     elif clazz is str:
         if not isinstance(value, str):
-            raise ex
+            raise UnexpectedTypeException(value, str, json_path)
         return value
 
     elif clazz is int:
-        if not isinstance(value, int):
-            raise ex
+        if not isinstance(value, int) or value is True or value is False:
+            raise UnexpectedTypeException(value, int, json_path)
         return value
 
     elif clazz is float:
         if not isinstance(value, float):
-            raise ex
+            raise UnexpectedTypeException(value, float, json_path)
         return value
 
     elif clazz is bool:
         if not isinstance(value, bool):
-            raise ex
+            raise UnexpectedTypeException(value, bool, json_path)
         return value
 
     elif type_information.is_list(clazz):
         if not isinstance(value, list):
-            raise ex
+            raise UnexpectedTypeException(value, list, json_path)
         clazz = type_information.get_list_type(clazz)
-        return [_parse_value(v, clazz, field_json_name) for v in value]
+        return [_parse_value(v, clazz, json_path + [i]) for i, v in enumerate(value)]
 
     elif type_information.is_dict(clazz):
         if not isinstance(value, dict):
-            raise ex
+            raise UnexpectedTypeException(value, dict, json_path)
         key_clazz, value_clazz = type_information.get_dict_types(clazz)
         if not key_clazz is str:
-            raise Exception(f"Dict keys must be strings not {key_clazz}")
-        return {k: _parse_value(v, value_clazz, k) for k, v in value.items()}
+            raise NonStringKeyException(value, key_clazz, json_path)
+        return {k: _parse_value(v, value_clazz, json_path + [k]) for k, v in value.items()}
 
     elif type_information.is_set(clazz):
         if not isinstance(value, list):
-            raise ex
+            raise UnexpectedTypeException(value, list, json_path)
         clazz = type_information.get_set_type(clazz)
-        return {_parse_value(v, clazz, field_json_name) for v in value}
+        return {_parse_value(v, clazz, json_path) for v in value}
 
     elif type_information.is_tuple(clazz):
         if not isinstance(value, list):
-            raise ex
+            raise UnexpectedTypeException(value, list, json_path)
         classes = type_information.get_tuple_types(clazz)
         if len(classes) != len(value):
-            raise Exception(f"Expected tuple to have {len(classes)} but has {len(value)}")
-        return tuple(_parse_value(value[i], classes[i], field_json_name) for i in range(len(value)))
+            raise InvaludTupleSizeException(value, len(classes), json_path)
+        return tuple(_parse_value(value[i], classes[i], json_path) for i in range(len(value)))
     
     elif type_information.is_union(clazz):
         ex_msg = []
         classes = type_information.get_union_types(clazz)
-        found = False
         for c in classes:
             try:
-                value = _parse_value(value, c, field_json_name)
+                value = _parse_value(value, c, json_path)
                 return value
             except Exception as e:
                 ex_msg.append(e)
-        raise Exception(f"Key {field_json_name} is an union but no option matches it: " + ",".join(ex_msg))
+        raise NoUnionVariantException(value, classes, ex_msg, json_path)
     
     elif type_information.is_literal(clazz):
         literal_values = type_information.get_literal_values(clazz)
         if value not in literal_values:
-            raise Exception(f"Key {field_json_name} has value {value}, but expected one of {literal_values}")
+            raise NoLiteralVariantException(value, literal_values, json_path)
         return value
 
     elif type_information.is_supported_class(clazz):
-        return _parse_object(value, clazz)
+        return _parse_object(value, clazz, json_path)
 
-    raise Exception(f"Cannot parse {clazz}")
+    raise CanNotParseTypeException(value, clazz, json_path)
 
-def _parse_object(data: Dict, clazz: Type):
-    if type_information.is_dict(clazz):
-        return _parse_value(data, clazz)
+def _parse_object(data: Dict, clazz: Type, json_path: List[str]):
     fields = type_information.extract_field_info(clazz)
     values = {}
     for field_json_name, field in fields.items():
         field_value = data.get(field_json_name, None)
-        values[field.name_in_class] = _parse_value(field_value, field.clazz, field_json_name)
+        values[field.name_in_class] = _parse_value(field_value, field.clazz, json_path + [field_json_name])
     return clazz(**values)
 
-def parse_json(data: Union[Dict[str, Any], List[Dict[str, Any]]], clazz: Union[Type, List[Type]]):
-    if isinstance(clazz, list):
-        if len(clazz) != 1 or not isinstance(clazz[0], type):
-            raise Exception()
-        if not isinstance(data, list):
-            raise Exception()
-        return [_parse_object(value, clazz[0]) for value in data]
-    
-    if not isinstance(clazz, type):
-        raise Exception()
-    if not isinstance(data, dict):
-        raise Exception()
-    return _parse_object(data, clazz)
+JSONType = Union[None, bool, int, float, str, List["JSONType"], Dict[str, "JSONType"]]
+T = TypeVar('T')
+def parse_json(data: JSONType, clazz: Type[T]) -> T:
+    return _parse_value(data, clazz, [])
