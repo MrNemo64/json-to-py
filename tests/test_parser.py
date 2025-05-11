@@ -1,4 +1,3 @@
-
 import sys
 
 if sys.version_info < (3, 8):
@@ -6,7 +5,7 @@ if sys.version_info < (3, 8):
 else:
     from typing import Literal
     
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, List, NamedTuple, Set, Tuple, Union
 import unittest
 import os
 import json
@@ -103,6 +102,35 @@ class TestTypeHelpers(unittest.TestCase):
                 else:
                     parsed_value = parse_json(data, type(expected_value))
                 self.assertEqual(parsed_value, expected_value)
+
+    def test_literals_as_versioning(self):
+        class MyClass(NamedTuple):
+            x: int
+            y: int
+        class MyClass2(NamedTuple):
+            version: Literal["1.1"]
+            x: int
+            y: int
+            z: int
+        class MyClass3(NamedTuple):
+            version: Literal["2.0"]
+            x: float
+            y: float
+            z: float
+        clazz = Union[MyClass3, MyClass2, MyClass]
+
+        self.assertEqual(parse_json({"x": 1, "y": 2}, clazz), MyClass(1, 2))
+        self.assertEqual(parse_json({"version": "1.1", "x": 1, "y": 2, "z": 3}, clazz), MyClass2("1.1", 1, 2, 3))
+        self.assertEqual(parse_json({"version": "2.0", "x": 1.0, "y": 2.0, "z": 3.0}, clazz), MyClass3("2.0", 1.0, 2.0, 3.0))
+        
+        with self.assertRaises(NoUnionVariantException) as cm:
+            parse_json({"version": "3.0", "x": 1.0, "y": 2.0, "z": 3.0}, clazz)
+
+        ex = cm.exception
+        self.assertEqual(len(ex.exceptions), 3)
+        self.assertIs(type(ex.exceptions[0]), NoLiteralVariantException)
+        self.assertIs(type(ex.exceptions[1]), NoLiteralVariantException)
+        self.assertIs(type(ex.exceptions[2]), UnexpectedTypeException)
 
     def test_invalid_json(self):
         """Test for an invalid json"""
