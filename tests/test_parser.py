@@ -251,5 +251,129 @@ class TestParseJsonFailures(unittest.TestCase):
         self.assertEqual(e.clazz, CustomClass)
         self.assertEqual(e.actual_value, {})
 
+class TestExamples(unittest.TestCase):
+    def test_complex_example(self):
+        class UserInformation(NamedTuple):
+            name: str
+            age: int
+
+        class UserInformation_v2(NamedTuple):
+            version: Literal["1.2"] # Added to differenciate between versions
+            name: str
+            surenames: List[str] # Added
+            age: int
+
+        class UserInformation_v3(NamedTuple):
+            version: Literal["1.3"]
+            name: List[str] # Merged name with surenames
+            age: float # Changed from int to float
+
+        @dataclass # Switched to dataclass
+        class UserInformation_v4():
+            version: Literal["1.4"]
+            id: str # Added
+            name: List[str]
+            age: float
+            relations: List[str] # Added
+        
+        @dataclass
+        class UserRelation():
+            user: str
+            relation_type: str = field(metadata={"json-to-py": {"name": "relation-type"}}) # Will apprear in the json as 'relation-type'
+
+        @dataclass
+        class UserInformation_v5():
+            version: Literal["1.5"]
+            id: str
+            name: List[str]
+            age: float
+            relations: List[UserRelation] # Changed to UserRelation
+        
+        @dataclass
+        class UserInformation_v6():
+            version: Literal["1.6"]
+            id: str
+            name: List[str]
+            age: float
+            relations: List[UserRelation]
+            extra_information: Dict[str, str] = field(metadata={"json-to-py": {"name": "extra-information"}}) # Added. Will apprear in the json as 'extra-information'
+
+        @dataclass
+        class UserRelation_v2():
+            version: Literal["1.2"] # Added to differenciate between versions
+            user: str
+            since: str
+            relation_type: str = field(metadata={"json-to-py": {"name": "relation-type"}})
+
+        class UserFieldInt(NamedTuple):
+            name: str
+            value: int
+
+        class UserFieldStr(NamedTuple):
+            name: str
+            value: str
+
+        class UserFieldBool(NamedTuple):
+            name: str
+            value: bool
+
+        @dataclass
+        class UserInformation_v7():
+            version: Literal["1.7"]
+            id: str
+            name: List[str]
+            age: float
+            relations: List[UserRelation_v2] # Changed
+            extra_information: List[Union[UserFieldInt, UserFieldStr, UserFieldBool]] = field(metadata={"json-to-py": {"name": "extra-information"}}) # Changed
+        
+        all_user_info = Union[UserInformation_v7, UserInformation_v6, UserInformation_v5, UserInformation_v4, UserInformation_v3, UserInformation_v2, UserInformation]
+
+        self.assertEqual(parse_json({
+            "name": "Nemo",
+            "age": 64
+            }, all_user_info), UserInformation("Nemo", 64))
+        self.assertEqual(parse_json({
+            "version": "1.2",
+            "name": "Nemo",
+            "surenames": ["First", "Seccond"],
+            "age": 64
+            }, all_user_info), UserInformation_v2("1.2", "Nemo", ["First", "Seccond"], 64))
+        self.assertEqual(parse_json({
+            "version": "1.3",
+            "name": ["Nemo", "First", "Seccond"],
+            "age": 64.5
+            }, all_user_info), UserInformation_v3("1.3", ["Nemo", "First", "Seccond"], 64.5))
+        self.assertEqual(parse_json({
+            "version": "1.4",
+            "id": "id123",
+            "name": ["Nemo", "First", "Seccond"],
+            "age": 64.5,
+            "relations": ["id456"]
+            }, all_user_info), UserInformation_v4("1.4", "id123", ["Nemo", "First", "Seccond"], 64.5, ["id456"]))
+        self.assertEqual(parse_json({
+            "version": "1.5",
+            "id": "id123",
+            "name": ["Nemo", "First", "Seccond"],
+            "age": 64.5,
+            "relations": [{"user": "id456", "relation-type": "friend"}]
+            }, all_user_info), UserInformation_v5("1.5", "id123", ["Nemo", "First", "Seccond"], 64.5, [UserRelation("id456", "friend")]))
+        self.assertEqual(parse_json({
+            "version": "1.6",
+            "id": "id123",
+            "name": ["Nemo", "First", "Seccond"],
+            "age": 64.5,
+            "relations": [{"user": "id456", "relation-type": "friend"}],
+            "extra-information": {"extra": "info"}
+            }, all_user_info), UserInformation_v6("1.6", "id123", ["Nemo", "First", "Seccond"], 64.5, [UserRelation("id456", "friend")], {"extra": "info"}))
+        self.assertEqual(parse_json({
+            "version": "1.7",
+            "id": "id123",
+            "name": ["Nemo", "First", "Seccond"],
+            "age": 64.5,
+            "relations": [{"version": "1.2", "user": "id456", "since": "11-05-2025", "relation-type": "friend"}],
+            "extra-information": [{"name": "a string", "value": "string value"}, {"name": "an int", "value": 987}, {"name": "a bool", "value": True}]
+            }, all_user_info), UserInformation_v7("1.7", "id123", ["Nemo", "First", "Seccond"], 64.5, [UserRelation_v2("1.2", "id456", "11-05-2025", "friend")], [UserFieldStr("a string", "string value"), UserFieldInt("an int", 987), UserFieldBool("a bool", True)]))
+        
+
 if __name__ == "__main__":
     unittest.main()
