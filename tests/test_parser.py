@@ -130,7 +130,8 @@ class TestTypeHelpers(unittest.TestCase):
         ex = cm.exception
         self.assertEqual("a string that should be an int", ex.actual_value)
         self.assertIs(int, ex.expected_type)
-        self.assertEqual(["c", "d", "k", "1"], ex.json_path)
+        self.assertEqual(["c", "d", "k", 1], ex.json_path)
+        self.assertEqual("c.d.k[1]", ex.full_path)
 
 if __name__ == "__main__":
     unittest.main()

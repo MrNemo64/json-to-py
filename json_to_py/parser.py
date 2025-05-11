@@ -2,9 +2,21 @@
 from typing import Dict, Type, Union, List, Any
 from . import type_information
 
+def _print_json_path(items: List[Union[str, int]]) -> str:
+    result = []
+    for item in items:
+        if isinstance(item, str):
+            if result:
+                result.append(".")
+            result.append(item)
+        else:
+            result.append("[" + str(item) + "]")
+    return ''.join(result)
+
 class UnexpectedTypeException(Exception):
-    def __init__(self, actual_value: Any, expected_type: Type, json_path: List[str]):
-        full_path = ".".join(json_path)
+
+    def __init__(self, actual_value: Any, expected_type: Type, json_path: List[Union[str, int]]):
+        full_path = _print_json_path(json_path)
         super().__init__(f"Key {full_path} is a {type(actual_value)} but expected a {expected_type}")
         self.actual_value = actual_value
         self.expected_type = expected_type
@@ -44,7 +56,7 @@ def _parse_value(value: Any, clazz: Type, json_path: List[str]):
         if not isinstance(value, list):
             raise UnexpectedTypeException(value, list, json_path)
         clazz = type_information.get_list_type(clazz)
-        return [_parse_value(v, clazz, json_path + [str(i)]) for i, v in enumerate(value)]
+        return [_parse_value(v, clazz, json_path + [i]) for i, v in enumerate(value)]
 
     elif type_information.is_dict(clazz):
         if not isinstance(value, dict):
