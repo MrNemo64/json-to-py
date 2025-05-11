@@ -1,4 +1,3 @@
-
 import sys
 
 if sys.version_info < (3, 8):
@@ -6,11 +5,11 @@ if sys.version_info < (3, 8):
 else:
     from typing import Literal
     
-from typing import Dict, List, Set, Tuple, Union
+from typing import Dict, List, NamedTuple, Set, Tuple, Union
 import unittest
 import os
 import json
-from json_to_py.parser import CanNotParseTypeException, NoLiteralVariantException, parse_json, UnexpectedTypeException, InvaludTupleSizeException, NonStringKeyException, NoUnionVariantException
+from json_to_py.parser import CanNotParseTypeException, NoLiteralVariantException, parse_json, UnexpectedTypeException, InvalidTupleSizeException, NonStringKeyException, NoUnionVariantException
 from dataclasses import dataclass, field
 
 import tests.expected_named_tuples as expected_named_tuples
@@ -104,6 +103,35 @@ class TestTypeHelpers(unittest.TestCase):
                     parsed_value = parse_json(data, type(expected_value))
                 self.assertEqual(parsed_value, expected_value)
 
+    def test_literals_as_versioning(self):
+        class MyClass(NamedTuple):
+            x: int
+            y: int
+        class MyClass2(NamedTuple):
+            version: Literal["1.1"]
+            x: int
+            y: int
+            z: int
+        class MyClass3(NamedTuple):
+            version: Literal["2.0"]
+            x: float
+            y: float
+            z: float
+        clazz = Union[MyClass3, MyClass2, MyClass]
+
+        self.assertEqual(parse_json({"x": 1, "y": 2}, clazz), MyClass(1, 2))
+        self.assertEqual(parse_json({"version": "1.1", "x": 1, "y": 2, "z": 3}, clazz), MyClass2("1.1", 1, 2, 3))
+        self.assertEqual(parse_json({"version": "2.0", "x": 1.0, "y": 2.0, "z": 3.0}, clazz), MyClass3("2.0", 1.0, 2.0, 3.0))
+        
+        with self.assertRaises(NoUnionVariantException) as cm:
+            parse_json({"version": "3.0", "x": 1.0, "y": 2.0, "z": 3.0}, clazz)
+
+        ex = cm.exception
+        self.assertEqual(len(ex.exceptions), 3)
+        self.assertIs(type(ex.exceptions[0]), NoLiteralVariantException)
+        self.assertIs(type(ex.exceptions[1]), NoLiteralVariantException)
+        self.assertIs(type(ex.exceptions[2]), UnexpectedTypeException)
+
     def test_invalid_json(self):
         """Test for an invalid json"""
         @dataclass
@@ -195,7 +223,7 @@ class TestParseJsonFailures(unittest.TestCase):
         self.assertEqual(e.expected_type, list)
 
     def test_tuple_wrong_length(self):
-        with self.assertRaises(InvaludTupleSizeException) as cm:
+        with self.assertRaises(InvalidTupleSizeException) as cm:
             parse_json([1], Tuple[int, str])
         e = cm.exception
         self.assertEqual(e.tuple_size, 2)
@@ -222,6 +250,130 @@ class TestParseJsonFailures(unittest.TestCase):
         e = cm.exception
         self.assertEqual(e.clazz, CustomClass)
         self.assertEqual(e.actual_value, {})
+
+class TestExamples(unittest.TestCase):
+    def test_complex_example(self):
+        class UserInformation(NamedTuple):
+            name: str
+            age: int
+
+        class UserInformation_v2(NamedTuple):
+            version: Literal["1.2"] # Added to differenciate between versions
+            name: str
+            surenames: List[str] # Added
+            age: int
+
+        class UserInformation_v3(NamedTuple):
+            version: Literal["1.3"]
+            name: List[str] # Merged name with surenames
+            age: float # Changed from int to float
+
+        @dataclass # Switched to dataclass
+        class UserInformation_v4():
+            version: Literal["1.4"]
+            id: str # Added
+            name: List[str]
+            age: float
+            relations: List[str] # Added
+        
+        @dataclass
+        class UserRelation():
+            user: str
+            relation_type: str = field(metadata={"json-to-py": {"name": "relation-type"}}) # Will apprear in the json as 'relation-type'
+
+        @dataclass
+        class UserInformation_v5():
+            version: Literal["1.5"]
+            id: str
+            name: List[str]
+            age: float
+            relations: List[UserRelation] # Changed to UserRelation
+        
+        @dataclass
+        class UserInformation_v6():
+            version: Literal["1.6"]
+            id: str
+            name: List[str]
+            age: float
+            relations: List[UserRelation]
+            extra_information: Dict[str, str] = field(metadata={"json-to-py": {"name": "extra-information"}}) # Added. Will apprear in the json as 'extra-information'
+
+        @dataclass
+        class UserRelation_v2():
+            version: Literal["1.2"] # Added to differenciate between versions
+            user: str
+            since: str
+            relation_type: str = field(metadata={"json-to-py": {"name": "relation-type"}})
+
+        class UserFieldInt(NamedTuple):
+            name: str
+            value: int
+
+        class UserFieldStr(NamedTuple):
+            name: str
+            value: str
+
+        class UserFieldBool(NamedTuple):
+            name: str
+            value: bool
+
+        @dataclass
+        class UserInformation_v7():
+            version: Literal["1.7"]
+            id: str
+            name: List[str]
+            age: float
+            relations: List[UserRelation_v2] # Changed
+            extra_information: List[Union[UserFieldInt, UserFieldStr, UserFieldBool]] = field(metadata={"json-to-py": {"name": "extra-information"}}) # Changed
+        
+        all_user_info = Union[UserInformation_v7, UserInformation_v6, UserInformation_v5, UserInformation_v4, UserInformation_v3, UserInformation_v2, UserInformation]
+
+        self.assertEqual(parse_json({
+            "name": "Nemo",
+            "age": 64
+            }, all_user_info), UserInformation("Nemo", 64))
+        self.assertEqual(parse_json({
+            "version": "1.2",
+            "name": "Nemo",
+            "surenames": ["First", "Seccond"],
+            "age": 64
+            }, all_user_info), UserInformation_v2("1.2", "Nemo", ["First", "Seccond"], 64))
+        self.assertEqual(parse_json({
+            "version": "1.3",
+            "name": ["Nemo", "First", "Seccond"],
+            "age": 64.5
+            }, all_user_info), UserInformation_v3("1.3", ["Nemo", "First", "Seccond"], 64.5))
+        self.assertEqual(parse_json({
+            "version": "1.4",
+            "id": "id123",
+            "name": ["Nemo", "First", "Seccond"],
+            "age": 64.5,
+            "relations": ["id456"]
+            }, all_user_info), UserInformation_v4("1.4", "id123", ["Nemo", "First", "Seccond"], 64.5, ["id456"]))
+        self.assertEqual(parse_json({
+            "version": "1.5",
+            "id": "id123",
+            "name": ["Nemo", "First", "Seccond"],
+            "age": 64.5,
+            "relations": [{"user": "id456", "relation-type": "friend"}]
+            }, all_user_info), UserInformation_v5("1.5", "id123", ["Nemo", "First", "Seccond"], 64.5, [UserRelation("id456", "friend")]))
+        self.assertEqual(parse_json({
+            "version": "1.6",
+            "id": "id123",
+            "name": ["Nemo", "First", "Seccond"],
+            "age": 64.5,
+            "relations": [{"user": "id456", "relation-type": "friend"}],
+            "extra-information": {"extra": "info"}
+            }, all_user_info), UserInformation_v6("1.6", "id123", ["Nemo", "First", "Seccond"], 64.5, [UserRelation("id456", "friend")], {"extra": "info"}))
+        self.assertEqual(parse_json({
+            "version": "1.7",
+            "id": "id123",
+            "name": ["Nemo", "First", "Seccond"],
+            "age": 64.5,
+            "relations": [{"version": "1.2", "user": "id456", "since": "11-05-2025", "relation-type": "friend"}],
+            "extra-information": [{"name": "a string", "value": "string value"}, {"name": "an int", "value": 987}, {"name": "a bool", "value": True}]
+            }, all_user_info), UserInformation_v7("1.7", "id123", ["Nemo", "First", "Seccond"], 64.5, [UserRelation_v2("1.2", "id456", "11-05-2025", "friend")], [UserFieldStr("a string", "string value"), UserFieldInt("an int", 987), UserFieldBool("a bool", True)]))
+        
 
 if __name__ == "__main__":
     unittest.main()
