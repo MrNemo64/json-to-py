@@ -48,7 +48,7 @@ class NonStringKeyException(UnexpectedTypeException):
         self.key_clazz = key_clazz
 
 class NoLiteralVariantException(UnexpectedTypeException):
-    def __init__(self, actual_value: Any, expected_values: List[Any], json_path: List[Union[str, int]], full_path: Optional[str] = None):
+    def __init__(self, actual_value: Any, expected_values: Tuple[Any], json_path: List[Union[str, int]], full_path: Optional[str] = None):
         full_path = _print_json_path(json_path) if full_path is None else full_path
         super().__init__(actual_value, Literal, json_path, full_path, f"No literal variant of the list [{', '.join(map(str, expected_values))}] matched the value {actual_value} at {full_path}")
         self.varian_values = expected_values
@@ -59,7 +59,7 @@ class InvaludTupleSizeException(UnexpectedTypeException):
         super().__init__(actual_value, Tuple, json_path, full_path, f"Expected json list {actual_value} at {full_path} to have {tuple_size} elements but has {len(actual_value)}")
         self.tuple_size = tuple_size
 
-class CanNotParseType(JsonParsingException):
+class CanNotParseTypeException(JsonParsingException):
     def __init__(self, actual_value: Any, clazz: Type, json_path: List[Union[str, int]], full_path: Optional[str] = None):
         full_path = _print_json_path(json_path) if full_path is None else full_path
         super().__init__(f"Cannot parse {clazz} at {full_path}", json_path, full_path)
@@ -81,7 +81,7 @@ def _parse_value(value: Any, clazz: Type, json_path: List[str]):
         return value
 
     elif clazz is int:
-        if not isinstance(value, int):
+        if not isinstance(value, int) or value is True or value is False:
             raise UnexpectedTypeException(value, int, json_path)
         return value
 
@@ -143,7 +143,7 @@ def _parse_value(value: Any, clazz: Type, json_path: List[str]):
     elif type_information.is_supported_class(clazz):
         return _parse_object(value, clazz, json_path)
 
-    raise CanNotParseType(value, clazz, json_path)
+    raise CanNotParseTypeException(value, clazz, json_path)
 
 def _parse_object(data: Dict, clazz: Type, json_path: List[str]):
     fields = type_information.extract_field_info(clazz)

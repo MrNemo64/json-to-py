@@ -309,12 +309,12 @@ def extract_field_info(clazz: Type) -> Dict[str, FieldInformation]:
     elif is_dataclass(clazz):
         for f in fields(clazz):
             metadata = f.metadata.get("json-to-py", None)
-            if metadata is not None:
+            if metadata is None:
                 result[f.name] = FieldInformation(clazz=f.type, name_in_class=f.name)
-            if not isinstance(metadata, dict):
+            elif not isinstance(metadata, dict):
                 raise InvalidJsonToPyMedatada("The json-to-py field of the metadata must be a dict")
             else:
-                json_name = metadata.get
+                json_name = metadata.get("name")
                 result[json_name] = FieldInformation(clazz=f.type, name_in_class=f.name)
 
     else:

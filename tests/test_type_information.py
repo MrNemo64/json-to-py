@@ -69,7 +69,7 @@ class TestTypeHelpers(unittest.TestCase):
         class Point:
             x: int
             y: int
-            z: Optional[int] = field(default=None, metadata={"json_name": "altitude"})
+            z: Optional[int] = field(default=None, metadata={"json-to-py": {"name": "altitude"}})
 
         field_info = extract_field_info(Point)
         self.assertIn('x', field_info)
@@ -82,6 +82,13 @@ class TestTypeHelpers(unittest.TestCase):
 
     def test_extract_field_info_invalid(self):
         self.assertRaises(TypeError, extract_field_info, int)
+
+    def test_unsupported_dataclass_metadata(self):
+        @dataclass
+        class BadMeta:
+            a: int = field(metadata={"json-to-py": "not a dict"})
+        with self.assertRaises(InvalidJsonToPyMedatada):
+            extract_field_info(BadMeta)
 
 if __name__ == "__main__":
     unittest.main()
