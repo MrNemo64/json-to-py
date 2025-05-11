@@ -22,10 +22,6 @@ def generate_expected(module):
 
     return {
         "primitive_types": PrimitiveTypes(123, "str", True, None, 456, 1.2),
-        "list_of_primitive_types": [
-            PrimitiveTypes(123, "str", True, None, 456, 1.2),
-            PrimitiveTypes(123123, "strstr", False, None, 456456, 12.3)
-        ],
         "lists_with_lists": Matrix([[1, 2, 3], [4, 5, 6], [7, 8, 9]]),
         "nested_data_class": Person(
             name="Alice",

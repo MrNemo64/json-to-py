@@ -14,7 +14,6 @@ def _print_json_path(items: List[Union[str, int]]) -> str:
     return ''.join(result)
 
 class UnexpectedTypeException(Exception):
-
     def __init__(self, actual_value: Any, expected_type: Type, json_path: List[Union[str, int]]):
         full_path = _print_json_path(json_path)
         super().__init__(f"Key {full_path} is a {type(actual_value)} but expected a {expected_type}")
@@ -111,16 +110,5 @@ def _parse_object(data: Dict, clazz: Type, json_path: List[str]):
         values[field.name_in_class] = _parse_value(field_value, field.clazz, json_path + [field_json_name])
     return clazz(**values)
 
-def parse_json(data: Union[Dict[str, Any], List[Dict[str, Any]]], clazz: Union[Type, List[Type]]):
-    if isinstance(clazz, list):
-        if len(clazz) != 1 or not isinstance(clazz[0], type):
-            raise Exception()
-        if not isinstance(data, list):
-            raise Exception()
-        return [_parse_value(value, clazz[0], [str(i)]) for i, value in enumerate(data)]
-    
-    if not isinstance(clazz, type):
-        raise Exception()
-    if not isinstance(data, dict):
-        raise Exception()
+def parse_json(data: Any, clazz: Type):
     return _parse_value(data, clazz, [])
