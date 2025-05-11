@@ -1,14 +1,15 @@
-from .parser import parse_json, JsonParsingException, UnexpectedTypeException, NoUnionVariantException, NonStringKeyException, NoLiteralVariantException, InvalidTupleSizeException, CanNotParseTypeException
-from .type_information import InvalidJsonToPyMedatada
+from .parser import parse_json
+from . import parser
+from . import type_information
 
 __all__ = [
     parse_json,
-    JsonParsingException,
-    UnexpectedTypeException,
-    NoUnionVariantException,
-    NonStringKeyException,
-    NoLiteralVariantException,
-    InvalidTupleSizeException,
-    CanNotParseTypeException,
-    InvalidJsonToPyMedatada
+    parser.JsonParsingException,
+    parser.UnexpectedTypeException,
+    parser.NoUnionVariantException,
+    parser.NonStringKeyException,
+    parser.NoLiteralVariantException,
+    parser.InvalidTupleSizeException,
+    parser.CanNotParseTypeException,
+    type_information.InvalidJsonToPyMedatada
 ]
