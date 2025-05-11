@@ -9,7 +9,7 @@ from typing import Dict, List, NamedTuple, Set, Tuple, Union
 import unittest
 import os
 import json
-from json_to_py.parser import CanNotParseTypeException, NoLiteralVariantException, parse_json, UnexpectedTypeException, InvaludTupleSizeException, NonStringKeyException, NoUnionVariantException
+from json_to_py.parser import CanNotParseTypeException, NoLiteralVariantException, parse_json, UnexpectedTypeException, InvalidTupleSizeException, NonStringKeyException, NoUnionVariantException
 from dataclasses import dataclass, field
 
 import tests.expected_named_tuples as expected_named_tuples
@@ -223,7 +223,7 @@ class TestParseJsonFailures(unittest.TestCase):
         self.assertEqual(e.expected_type, list)
 
     def test_tuple_wrong_length(self):
-        with self.assertRaises(InvaludTupleSizeException) as cm:
+        with self.assertRaises(InvalidTupleSizeException) as cm:
             parse_json([1], Tuple[int, str])
         e = cm.exception
         self.assertEqual(e.tuple_size, 2)
