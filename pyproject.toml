@@ -5,9 +5,10 @@ license = {text = "MIT"}
 name = "json-to-py"
 readme = "README.md"
 requires-python = ">=3.7"
-version = "0.1.0"
+version = "1.0.0"
 
 [project.urls]
+"Bug Tracker" = "https://github.com/MrNemo64/json-to-py/issues"
 Homepage = "https://github.com/MrNemo64/json-to-py"
 
 [tool.setuptools]
