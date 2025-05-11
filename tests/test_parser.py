@@ -9,7 +9,9 @@ from typing import Dict, List, NamedTuple, Set, Tuple, Union
 import unittest
 import os
 import json
-from json_to_py.parser import CanNotParseTypeException, NoLiteralVariantException, parse_json, UnexpectedTypeException, InvalidTupleSizeException, NonStringKeyException, NoUnionVariantException
+from json_to_py.type_information import *
+from json_to_py import parse_json
+from json_to_py.parser import CanNotParseTypeException, NoLiteralVariantException, UnexpectedTypeException, InvalidTupleSizeException, NonStringKeyException, NoUnionVariantException
 from dataclasses import dataclass, field
 
 import tests.expected_named_tuples as expected_named_tuples
