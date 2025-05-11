@@ -1,5 +1,5 @@
 
-from typing import Dict, Type, Union, List, Any
+from typing import Dict, Type, TypeVar, Union, List, Any
 from . import type_information
 
 def _print_json_path(items: List[Union[str, int]]) -> str:
@@ -110,5 +110,7 @@ def _parse_object(data: Dict, clazz: Type, json_path: List[str]):
         values[field.name_in_class] = _parse_value(field_value, field.clazz, json_path + [field_json_name])
     return clazz(**values)
 
-def parse_json(data: Any, clazz: Type):
+JSONType = Union[None, bool, int, float, str, List["JSONType"], Dict[str, "JSONType"]]
+T = TypeVar('T')
+def parse_json(data: JSONType, clazz: Type[T]) -> T:
     return _parse_value(data, clazz, [])
