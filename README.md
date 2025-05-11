@@ -82,6 +82,7 @@ Parses a JSON-compatible value (`data`) into an instance of the specified datacl
 
 #### Features
 
+- Works with Python 3.7+
 - Have different names in the json from a dataclass:
   ```python
   @dataclass
