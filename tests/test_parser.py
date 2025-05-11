@@ -132,6 +132,11 @@ class TestTypeHelpers(unittest.TestCase):
         self.assertIs(type(ex.exceptions[1]), NoLiteralVariantException)
         self.assertIs(type(ex.exceptions[2]), UnexpectedTypeException)
 
+    def test_new_unions(self):
+        if sys.version_info < (3, 10):
+            return
+        self.assertEqual(parse_json("a string", int | bool | str), "a string")
+
     def test_invalid_json(self):
         """Test for an invalid json"""
         @dataclass
